@@ -12,15 +12,13 @@ public class Contatto {
         this.cognome = cognome;
         this.recapito = recapito;
         if (!email.isEmpty() && email.contains("@")) {
-           this.email = email;
+            this.email = email;
         } else {
             this.email = "non registrata";
-            
-
         }
 
     }
-
+      
     public String getNome() {
         return nome;
     }

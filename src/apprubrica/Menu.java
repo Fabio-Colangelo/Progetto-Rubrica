@@ -1,11 +1,12 @@
 package apprubrica;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class Menu {
 
     Scanner scanner = new Scanner(System.in); //oggetto per leggere dati di input
-    Rubrica rubrica = new Rubrica(); //oggetto di tipo Rubrica, per avere accesso all'ArrayList contenenti oggetti di tipo Contatto
+    private Rubrica rubrica = new Rubrica(); //oggetto di tipo Rubrica, per avere accesso all'ArrayList contenenti oggetti di tipo Contatto
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     //SEZIONE: METODI PER LA GESTIONE DELL'INTERAZIONE E VISUALIZZAZIONE GRAFICA DEL MENU' PRINCIPALE 
@@ -36,10 +37,9 @@ public class Menu {
             menuPrincipale();
             try {
                 System.out.print("Inserire opzione > ");
-                scelta = scanner.nextInt();
+                scelta = Integer.parseInt(scanner.nextLine());
             } catch (InputMismatchException e) {
                 System.out.println("\nErrore, input non valido");
-                scanner.nextLine();
                 pause();
                 continue;
             }
@@ -79,6 +79,7 @@ public class Menu {
                     break;
             }
         } while (scelta != 6);
+
     }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     //SEZIONE: METODI PER LA VISUALIZZAZIONE DI RUBRICA E CONTATTI
@@ -91,7 +92,7 @@ public class Menu {
         int i = 0;
         System.out.println("\n  ---------- RUBRICA ----------\n");
         //controllo se la rubrica è vuota
-        if (rubrica.getRubrica().isEmpty() == true) {
+        if (rubrica.getRubrica().isEmpty()) {
             System.out.println("     Nessun contatto aggiunto!");
         } else {
             //si stampa a video i vari contatti
@@ -126,29 +127,30 @@ public class Menu {
      *
      */
     public void aggiungiContatto() {
-
+        String nome, cognome, recapito, email;
         System.out.print("\nInserire nome > ");
-        String nome = scanner.next();
-        scanner.nextLine();
-        nome = nome.substring(0, 1).toUpperCase() + nome.substring(1); // impostiamo in maiuscolo la prima lettere del nome
+        scanner.useDelimiter("\n"); //impostiamo il delimitatore di input
+        nome = scanner.nextLine();
+        nome = capitalize(nome);
         System.out.print("Inserire cognome > ");
-        String cognome = scanner.nextLine();
-        cognome = cognome.substring(0, 1).toUpperCase() + cognome.substring(1);//impostiamo in maiuscolo la prima lettere del cognome
-
+        cognome = scanner.nextLine();
+        cognome = capitalize(cognome);
         //Richiamare il metodo isEsistente per verificare se il nome e cognome inseriti corrispondono a un contatto già esistente
         if (isEsistente(nome, cognome) == false) {
-            String recapito;
+
             do {
                 System.out.print("Inserire recapito telefonico > ");
                 recapito = scanner.nextLine();
                 if (recapito.length() != 10 || !recapito.matches("\\d{10}")) {
-                    System.out.println("\nERRORE, il recapito inserito non è composto da 10 numeri!\n");
+                    System.out.println("\nRIPROVARE, recapito telefonico non composto da 10 NUMERI\n");
                     pause();
                 }
             } while (recapito.length() != 10 || !recapito.matches("\\d{10}"));
             System.out.print("Inserire Email (Premere invio per non registrare)> ");
-            String email = scanner.nextLine();
-
+            email = scanner.nextLine();
+            if (isEmailValid(email) != true) {
+                email = "";
+            }
             //allocazione dell'oggetto contatto creato (contattoAdd)
             Contatto contattoAdd = new Contatto(nome, cognome, recapito, email);
             rubrica.aggiungiContatto(contattoAdd);
@@ -157,7 +159,34 @@ public class Menu {
             printDati(contattoAdd);
             System.out.println("---------------------------------------");
         }
+    }
 
+    /**
+     * Capitalizza (trasforma) la prima lettera di ogni parola in una stringa,
+     * trasformando il resto delle lettere in minuscolo. Le parole sono separate
+     * da spazi.
+     *
+     * @param string la stringa di string da capitalizzare
+     * @return una nuova stringa con la prima lettera di ogni parola in
+     * maiuscolo e le altre lettere in minuscolo. Se l'string è null o vuoto,
+     * restituisce l'string originale.
+     */
+    public String capitalize(String string) {
+        if (string == null || string.isEmpty()) {
+            return string; //se la stringa passata come parametro è nulla o vuota ritornerà string
+        }
+
+        String[] parole = string.toLowerCase().split(" ");  // Divide in parole la stringa passata come parametro e converte in minuscolo
+        StringBuilder capitalized = new StringBuilder();
+
+        for (String parola : parole) {
+            if (!parola.isEmpty()) {
+                capitalized.append(Character.toUpperCase(parola.charAt(0))) // Prima lettera maiuscola
+                        .append(parola.substring(1)) // Aggiunge il resto della parola
+                        .append(" ");  // Aggiunge uno spazio dopo ogni parola
+            }
+        }
+        return capitalized.toString().trim();  // .trim rimuove lo spazio finale in eccesso
     }
 
     /**
@@ -178,12 +207,43 @@ public class Menu {
         return isEsistente;
     }
 
+    /**
+     * Verifica se una stringa rappresenta un indirizzo email valido secondo un
+     * modello definito da una espressione regolare.
+     * <p>
+     * Il metodo utilizza un'espressione regolare per convalidare l'email,
+     * controllando che il formato dell'indirizzo email rispetti le convenzioni
+     * standard. La validazione include il controllo della parte locale (prima
+     * del simbolo '@') e la parte del dominio (dopo il simbolo '@'), ma non
+     * esegue una verifica approfondita sul dominio o sul TLD.
+     * </p>
+     *
+     * <p>
+     * Le regole seguite dall'espressione regolare includono:</p>
+     * <ul>
+     * <li>Il nome locale può contenere lettere, numeri, e caratteri speciali
+     * come '_', '!', '#', '%', '&', e altri.</li>
+     * <li>Il dominio deve essere composto da lettere, numeri e trattini.</li>
+     * <li>Il dominio può contenere più segmenti separati da punti.</li>
+     * </ul>
+     *
+     * @param email L'indirizzo email da verificare.
+     * @return {@code true} se l'indirizzo email è valido, {@code false}
+     * altrimenti.
+     */
+    public static boolean isEmailValid(String email) {
+        String regex = "^[a-zA-Z0-9_!#$%&'*+/=?`{|}~^-]+(?:.[a-zA-Z0-9_!#$%&'*+/=?`{|}~^-]+)*@[a-zA-Z0-9-]+(?:.[a-zA-Z0-9-]+)*$";
+        Pattern p = Pattern.compile(regex);
+        return p.matcher(email).matches();
+    }
+
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------    
     //SEZIONE: METODI PER LA RIMOZIONE DEI CONTATTI
     /**
      * Metodo per rimuovere un contatto dalla rubrica, (ArrayList).
      */
     public void rimuoviContatto() {
+        String nome,cognome;
         int scelta = 0; //variabile per gestire le opzione del menù
         boolean esiste = false; // variabile utilizzata per verificare che il contatto che si vuole eliminare sia esistente
         do {
@@ -192,10 +252,10 @@ public class Menu {
             System.out.println("     1) Visualizza rubrica");
             System.out.println("     2) Rimuovi contatto");
             System.out.println("     3) MENU' principale");
-            System.out.println("--------------------------------");
+            System.out.println("-----------------------------------");
             try {
                 System.out.print("\nInserire opzione > ");
-                scelta = scanner.nextInt();
+                scelta = Integer.parseInt(scanner.nextLine());
             } catch (InputMismatchException e) {
                 System.out.println("\nErrore, input non valido");
                 scanner.nextLine();
@@ -218,11 +278,11 @@ public class Menu {
                         System.out.println("\n-- RUBRICA VUOTA --");
                         pause();
                     } else {
-                        System.out.print("\nInserire il nome > ");
-                        String nome = scanner.next();
-                        scanner.nextLine();
-                        System.out.print("Inserire il cognome > ");
-                        String cognome = scanner.nextLine();
+                        System.out.print("\nInserire nome > ");
+                        scanner.useDelimiter("\n"); //impostiamo il delimitatore di input
+                        nome = scanner.nextLine();
+                        System.out.print("Inserire cognome > ");
+                        cognome = scanner.nextLine();
                         for (int i = 0; i < rubrica.getRubrica().size(); i++) {
                             if (nome.equalsIgnoreCase(rubrica.getRubrica().get(i).getNome()) == true
                                     && cognome.equalsIgnoreCase(rubrica.getRubrica().get(i).getCognome())) {
@@ -238,7 +298,6 @@ public class Menu {
                             System.out.println("\nCONTATTO NON ESISTENTE");
                         }
                         pause();
-
                     }
             }
         } while (scelta != 3);
@@ -255,26 +314,28 @@ public class Menu {
      * esito positivo, altrimenti ritorna il valore NULL
      */
     public Contatto cercaContatto() {
+        String nome, cognome;
         cls();
         System.out.println("-- CERCA CONTATTO --");
         boolean isTrovato = false; //variabile per gestire la ricerca di un contatto; true = contatto trovato; false =  contatto non trovato
         if (rubrica.getRubrica().isEmpty()) {
             System.out.println("\n-- RUBRICA VUOTA --");
         } else {
-            System.out.print("\nInserire nome da cercare> ");
-            String nome = scanner.next();
-            scanner.nextLine();
-            System.out.print("Inserire cognome da cercare > ");
-            String cognome = scanner.nextLine();
+            System.out.print("\nInserire nome > ");
+            scanner.useDelimiter("\n"); //impostiamo il delimitatore di input
+            nome = scanner.nextLine();
+            nome = capitalize(nome);
+            System.out.print("Inserire cognome > ");
+            cognome = scanner.nextLine();
+            cognome = capitalize(cognome);
             for (int i = 0; i < rubrica.getRubrica().size(); i++) {
-                if (nome.equalsIgnoreCase(rubrica.getRubrica().get(i).getNome()) == true
-                        && cognome.equalsIgnoreCase(rubrica.getRubrica().get(i).getCognome()) == true) {
+                if (nome.equalsIgnoreCase(rubrica.getRubrica().get(i).getNome())
+                    && cognome.equalsIgnoreCase(rubrica.getRubrica().get(i).getCognome())) {
                     isTrovato = true;
                     System.out.println("\n----- CONTATTO TROVATO -----");
                     printDati(rubrica.getRubrica().get(i));
                     System.out.println("-----------------------------");
-                    return new Contatto(rubrica.getRubrica().get(i).getNome(), rubrica.getRubrica().get(i).getCognome(),
-                            rubrica.getRubrica().get(i).getRecapito(), rubrica.getRubrica().get(i).getEmail());
+                    return rubrica.getRubrica().get(i);
                 }
             }
             if (isTrovato == false) {
@@ -294,8 +355,8 @@ public class Menu {
      * di un contatto registrato nella rubrica,(ArrayList).
      */
     public void modificaContatto() {
+        String nome, cognome, recapito, email;
         int scelta = 0;
-
         do {
             cls();
             System.out.println("\n---- MENU' MODIFICA CONTATTO ----\n");
@@ -305,7 +366,7 @@ public class Menu {
             System.out.println("---------------------------------");
             try {
                 System.out.print("\nInserire opzione > ");
-                scelta = scanner.nextInt();
+                scelta = Integer.parseInt(scanner.nextLine());
             } catch (InputMismatchException e) {
                 System.out.println("\nErrore, input non valido");
                 scanner.nextLine();
@@ -317,7 +378,6 @@ public class Menu {
                 System.out.println("\nRIPROVARE, opzione inserita non valida");
                 pause();
             }
-
             switch (scelta) {
                 case 1:
                     cls();
@@ -331,58 +391,62 @@ public class Menu {
                         System.out.println("\n  -- RUBRICA VUOTA --");
                         pause();
                     } else {
-                        if (cercaContatto() != null) {
-                            for (int i = 0; i < rubrica.getRubrica().size(); i++) {
-                                System.out.print("\nInserire nuovo nome (Premere invio per non modificare)> ");
-                                String nomeM = scanner.nextLine();
-                                System.out.print("Inserire nuovo cognome (Premere invio per non modificare)> ");
-                                String cognomeM = scanner.nextLine();
-                                //Richiamare il metodo isEsistente per verificare se il nome e cognome inseriti corrispondono a un contatto già esistente.
-                                if (isEsistente(nomeM, cognomeM) == false) {
-                                    String recapitoM;
-                                    boolean isPossible = false; //variabile per gestire l'inserimento del recapito telefonico
-                                    do {
-                                        System.out.print("Inserire nuovo recapito telefonico (Premere invio per non modificare)> ");
-                                        //contattoAdd.setRecapito(scanner.nextLine());
-                                        recapitoM = scanner.nextLine();                        //controlliamo che il numero non contenga lettere
-                                        if (recapitoM.isEmpty() || recapitoM.length() == 10 || recapitoM.matches("\\d{10}")) {
-                                            isPossible = true;
-                                        } else {
-                                            System.out.println("\nRIPROVARE, Recapito telefonico non composto da 10 elementi\n");
-                                            pause();
-                                        }
-                                    } while (isPossible == false);
-                                    System.out.print("Inserire nuova Email (Premere invio per non modificare)> ");
-                                    String emailM = scanner.nextLine();
-
-                                    //controlli per non apportare modifiche ai campi del contatto
-                                    if (nomeM != null && !nomeM.isEmpty()) {
-                                        nomeM = nomeM.substring(0, 1).toUpperCase() + nomeM.substring(1);
-                                        rubrica.getRubrica().get(i).setNome(nomeM);
+                        Contatto contattoDaModificare = cercaContatto();
+                        
+                        if (contattoDaModificare != null) {      
+                            System.out.print("\nInserire nuovo nome (Premere INVIO per non modificare) > ");
+                            scanner.useDelimiter("\n"); //impostiamo il delimitatore di input
+                            nome = scanner.nextLine();
+                            nome = capitalize(nome);
+                            System.out.print("Inserire cognome (Premere INVIO per non modificare) > ");
+                            cognome = scanner.nextLine();
+                            cognome = capitalize(cognome);
+                            
+                            //Richiamare il metodo isEsistente per verificare se il nome e cognome inseriti corrispondono a un contatto già esistente.
+                            if (isEsistente(nome, cognome) == false) {
+                                String recapitoM;
+                                boolean isPossible = false; //variabile per gestire l'inserimento del recapito telefonico
+                                do {
+                                    System.out.print("Inserire nuovo recapito telefonico (Premere INVIO per non modificare) > ");
+                                    //contattoAdd.setRecapito(scanner.nextLine());
+                                    recapitoM = scanner.nextLine();                        //controlliamo che il numero non contenga lettere
+                                    if (recapitoM.isEmpty() || recapitoM.length() == 10 || recapitoM.matches("\\d{10}")) {
+                                        isPossible = true;
+                                    } else {
+                                        System.out.println("\nRIPROVARE, recapito telefonico non composto da 10 NUMERI\n");
+                                        pause();
                                     }
-                                    if (cognomeM != null && !cognomeM.isEmpty()) {
-                                        cognomeM = cognomeM.substring(0, 1).toUpperCase() + cognomeM.substring(1);
-                                        rubrica.getRubrica().get(i).setCognome(cognomeM);
+                                } while (isPossible == false);
+                                System.out.print("Inserire nuova Email (Premere INVIO per non modificare) > ");
+                                String emailM = scanner.nextLine();
+                                    if (nome != null && !nome.isEmpty()) {
+
+                                        contattoDaModificare.setNome(nome);
+                                    }
+                                    if (cognome != null && !cognome.isEmpty()) {
+
+                                        contattoDaModificare.setCognome(cognome);
                                     }
                                     if (!recapitoM.isEmpty()) {
-                                        rubrica.getRubrica().get(i).setRecapito(recapitoM);
+                                        contattoDaModificare.setRecapito(recapitoM);
                                     }
-                                    // Per l'email, verifico che non sia vuota e contenga '@'
-                                    if (emailM != null && !emailM.isEmpty() && emailM.contains("@")) {
-                                        rubrica.getRubrica().get(i).setEmail(emailM);
+                                    // Per l'email, si verifica che non sia vuota e che rispetti lo standard definito dall'espressione regolare
+                                    if (!emailM.isEmpty() && emailM.contains("@") && isEmailValid(emailM) == true) {
+                                        contattoDaModificare.setEmail(emailM);
                                     }
                                     System.out.println("\n----- CONTATTO MODIFICATO -----");
-                                    printDati(rubrica.getRubrica().get(i));
+                                    printDati(contattoDaModificare);
                                     System.out.println("-------------------------------");
                                     System.out.println();
                                     pause();
-                                }else{
-                                    pause();
-                                }
-                                break;
+                                   
+                                
+
+                            } else {
+                                pause();
                             }
 
-                        }else{
+                        } else {
                             pause();
                         }
                     }
@@ -392,6 +456,7 @@ public class Menu {
     }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     //SEZIONE: METODI PER MIGLIORARE LA VISUALIZZAZIONE ED ESECUZIONE DEL CODICE DA TERMINALE
+
     /**
      * metodo per mettere in pausa l'esecuzione del codice.
      *
